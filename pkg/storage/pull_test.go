@@ -45,7 +45,7 @@ func Test__doPull_Stats(t *testing.T) {
 	// Mock the doPull function to skip actual HTTP calls
 	// We'll test the stats collection logic by creating a modified version
 	stats := &PullStats{}
-	
+
 	// Simulate the stats collection that happens in doPull
 	for _, artifact := range artifacts {
 		if fileInfo, err := os.Stat(artifact.LocalPath); err == nil {
@@ -62,7 +62,7 @@ func Test__doPull_Stats(t *testing.T) {
 func Test__PullStats_EmptyDirectory(t *testing.T) {
 	// Test with no files
 	stats := &PullStats{}
-	
+
 	assert.Equal(t, 0, stats.FileCount)
 	assert.Equal(t, int64(0), stats.TotalSize)
 }
@@ -90,7 +90,7 @@ func Test__PullStats_LargeFiles(t *testing.T) {
 	}
 
 	stats := &PullStats{}
-	
+
 	// Simulate stats collection
 	if fileInfo, err := os.Stat(artifact.LocalPath); err == nil {
 		stats.FileCount++

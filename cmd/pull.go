@@ -195,7 +195,6 @@ func NewPullProjectCmd() *cobra.Command {
 	return cmd
 }
 
-
 func init() {
 	rootCmd.AddCommand(pullCmd)
 	pullCmd.AddCommand(NewPullJobCmd())
