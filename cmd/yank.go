@@ -3,8 +3,6 @@ package cmd
 import (
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
-	"github.com/semaphoreci/artifact/pkg/hub"
-	"github.com/semaphoreci/artifact/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -19,14 +17,17 @@ don't need them any more.`,
 }
 
 func runYankForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
-	hubClient, err := hub.NewClient()
-	errutil.Check(err)
-
 	// The yank operation does not have a destination override
 	paths, err := resolver.Resolve(files.OperationYank, args[0], "")
 	errutil.Check(err)
 
-	return paths, storage.Yank(hubClient, paths.Source)
+	// Get the configured backend
+	b := getBackend()
+	defer b.Close()
+
+	// Yank using the backend
+	ctx := getContext()
+	return paths, b.Yank(ctx, paths.Source)
 }
 
 func NewYankJobCmd() *cobra.Command {

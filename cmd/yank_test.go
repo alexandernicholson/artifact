@@ -9,6 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+
+	// Register backends for tests
+	_ "github.com/semaphoreci/artifact/pkg/backend/hubbackend"
+	_ "github.com/semaphoreci/artifact/pkg/backend/s3backend"
 )
 
 type yankTestCase struct {

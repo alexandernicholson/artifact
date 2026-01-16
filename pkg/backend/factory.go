@@ -15,12 +15,15 @@ func NewBackend() (Backend, error) {
 
 	switch backendType {
 	case BackendTypeHub:
-		// Import and create hub backend
-		// We use a lazy import approach here to avoid circular dependencies
+		if newHubBackend == nil {
+			return nil, fmt.Errorf("hub backend not registered - ensure github.com/semaphoreci/artifact/pkg/backend/hubbackend is imported")
+		}
 		return newHubBackend()
 
 	case BackendTypeS3:
-		// Import and create S3 backend
+		if newS3Backend == nil {
+			return nil, fmt.Errorf("s3 backend not registered - ensure github.com/semaphoreci/artifact/pkg/backend/s3backend is imported")
+		}
 		return newS3Backend()
 
 	default:

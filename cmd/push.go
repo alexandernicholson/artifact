@@ -6,14 +6,44 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
+	"github.com/semaphoreci/artifact/pkg/backend"
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
-	"github.com/semaphoreci/artifact/pkg/hub"
 	"github.com/semaphoreci/artifact/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+// getLocalStats calculates stats for local files/directories
+func getLocalStats(localPath string) (*storage.PushStats, error) {
+	stats := &storage.PushStats{}
+
+	info, err := os.Stat(localPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if !info.IsDir() {
+		stats.FileCount = 1
+		stats.TotalSize = info.Size()
+		return stats, nil
+	}
+
+	err = filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			stats.FileCount++
+			stats.TotalSize += info.Size()
+		}
+		return nil
+	})
+
+	return stats, err
+}
 
 const ExpireInDescription = `removes the files after the given amount of time.
 
@@ -36,9 +66,6 @@ while the rest of the semaphore process, or after it.`,
 }
 
 func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, *storage.PushStats, error) {
-	hubClient, err := hub.NewClient()
-	errutil.Check(err)
-
 	localSource, err := getSrc(args)
 	errutil.Check(err)
 
@@ -54,11 +81,30 @@ func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	return storage.Push(hubClient, resolver, storage.PushOptions{
-		SourcePath:          localSource,
-		DestinationOverride: destinationOverride,
-		Force:               force,
-	})
+	// Resolve paths
+	paths, err := resolver.Resolve(files.OperationPush, localSource, destinationOverride)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get the configured backend
+	b := getBackend()
+	defer b.Close()
+
+	// Push using the backend
+	ctx := getContext()
+	err = b.Push(ctx, paths.Source, paths.Destination, backend.PushOptions{Force: force})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get stats (approximate - backend doesn't return detailed stats yet)
+	stats, err := getLocalStats(paths.Source)
+	if err != nil {
+		return paths, &storage.PushStats{}, nil
+	}
+
+	return paths, stats, nil
 }
 
 func displayWarningThatExpireInIsNoLongerSupported() {

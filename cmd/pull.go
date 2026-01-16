@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
-	"github.com/semaphoreci/artifact/pkg/hub"
 	"github.com/semaphoreci/artifact/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,14 +27,67 @@ func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	force, err := cmd.Flags().GetBool("force")
 	errutil.Check(err)
 
-	hubClient, err := hub.NewClient()
-	errutil.Check(err)
+	// Resolve paths
+	paths, err := resolver.Resolve(files.OperationPull, args[0], destinationOverride)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return storage.Pull(hubClient, resolver, storage.PullOptions{
-		SourcePath:          args[0],
-		DestinationOverride: destinationOverride,
-		Force:               force,
+	// Check if destination exists (unless force)
+	if !force {
+		if _, err := os.Stat(paths.Destination); err == nil {
+			log.Errorf("'%s' already exists locally; delete it first, or use --force flag\n", paths.Destination)
+			return nil, nil, err
+		}
+	}
+
+	// Get the configured backend
+	b := getBackend()
+	defer b.Close()
+
+	// Pull using the backend
+	ctx := getContext()
+	err = b.Pull(ctx, paths.Source, paths.Destination)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get stats from downloaded files
+	stats, err := getPullStats(paths.Destination)
+	if err != nil {
+		return paths, &storage.PullStats{}, nil
+	}
+
+	return paths, stats, nil
+}
+
+// getPullStats calculates stats for pulled files
+func getPullStats(localPath string) (*storage.PullStats, error) {
+	stats := &storage.PullStats{}
+
+	info, err := os.Stat(localPath)
+	if err != nil {
+		return stats, nil
+	}
+
+	if !info.IsDir() {
+		stats.FileCount = 1
+		stats.TotalSize = info.Size()
+		return stats, nil
+	}
+
+	err = filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			stats.FileCount++
+			stats.TotalSize += info.Size()
+		}
+		return nil
 	})
+
+	return stats, err
 }
 
 func NewPullJobCmd() *cobra.Command {
