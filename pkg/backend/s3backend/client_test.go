@@ -151,7 +151,7 @@ func TestS3Backend_Pull_SingleFile(t *testing.T) {
 
 	// Pull file
 	dstFile := filepath.Join(tmpDir, "destination.txt")
-	err = s3Backend.Pull(ctx, "artifacts/projects/123/source.txt", dstFile)
+	err = s3Backend.Pull(ctx, "artifacts/projects/123/source.txt", dstFile, backend.PullOptions{})
 	assert.NoError(t, err)
 
 	// Verify content
@@ -168,7 +168,7 @@ func TestS3Backend_Pull_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	dstFile := filepath.Join(tmpDir, "nonexistent.txt")
 
-	err := s3Backend.Pull(ctx, "artifacts/projects/123/nonexistent.txt", dstFile)
+	err := s3Backend.Pull(ctx, "artifacts/projects/123/nonexistent.txt", dstFile, backend.PullOptions{})
 	assert.Error(t, err)
 	assert.IsType(t, &backend.ErrNotFound{}, err)
 }
