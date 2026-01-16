@@ -23,7 +23,7 @@ func runYankForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 
 	// Get the configured backend
 	b := getBackend()
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Yank using the backend
 	ctx := getContext()
