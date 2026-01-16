@@ -6,6 +6,7 @@
 - [Init](#init)
 - [Concepts](#concepts)
 - [Configs](#configs)
+- [S3 Backend (Direct Storage)](#s3-backend-direct-storage)
 - [CLI](#cli)
   - [push](#push)
   - [pull](#pull)
@@ -128,6 +129,67 @@ Workflow level artifacts default expire time in the same format as [Alternative 
 
 #### JobArtifactsExpire
 Job level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
+
+## S3 Backend (Direct Storage)
+
+The artifact CLI supports direct S3 storage as an alternative to the Semaphore Hub. This enables:
+- Self-hosted artifact storage with any S3-compatible backend (AWS S3, MinIO, R2, etc.)
+- Use outside of Semaphore CI environments
+- Custom retention and access policies
+
+### Configuration
+
+Set the backend type and S3 configuration via environment variables:
+
+```bash
+# Required
+export ARTIFACT_BACKEND=s3
+export ARTIFACT_S3_BUCKET=my-artifacts-bucket
+
+# Optional
+export ARTIFACT_S3_REGION=us-east-1           # AWS region (auto-detected if not set)
+export ARTIFACT_S3_ENDPOINT=http://minio:9000 # Custom endpoint for S3-compatible storage
+export ARTIFACT_S3_FORCE_PATH_STYLE=true      # Required for MinIO
+export ARTIFACT_S3_PREFIX=ci/artifacts        # Optional path prefix
+```
+
+Or via config file (`~/.artifact.yaml`):
+
+```yaml
+backend: s3
+s3:
+  bucket: my-artifacts-bucket
+  region: us-east-1
+  endpoint: http://minio:9000  # optional
+  forcePathStyle: true         # optional
+  prefix: ci/artifacts         # optional
+```
+
+### Authentication
+
+The S3 backend uses the AWS SDK default credential chain:
+- Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+- Shared credentials file (`~/.aws/credentials`)
+- IAM roles (EC2, ECS, Lambda)
+- IRSA (EKS web identity)
+- SSO profiles
+
+### Usage
+
+Commands work identically to Hub mode:
+
+```bash
+# Set required identifiers for path resolution
+export SEMAPHORE_PROJECT_ID=my-project
+export SEMAPHORE_JOB_ID=build-123
+
+# Push/pull/yank work the same way
+artifact push job build-output.tar.gz
+artifact pull job build-output.tar.gz
+artifact yank job build-output.tar.gz
+```
+
+For detailed technical documentation, see [docs/s3-backend.md](docs/s3-backend.md).
 
 ## CLI
 
