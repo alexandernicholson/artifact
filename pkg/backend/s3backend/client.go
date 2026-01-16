@@ -156,7 +156,7 @@ func (s *S3Backend) pushDirectory(ctx context.Context, localPath, remotePath str
 }
 
 // Pull downloads a file or directory from S3.
-func (s *S3Backend) Pull(ctx context.Context, remotePath, localPath string) error {
+func (s *S3Backend) Pull(ctx context.Context, remotePath, localPath string, opts backend.PullOptions) error {
 	log.Debug("S3Backend: Pulling...\n")
 	log.Debugf("* Remote: %s\n", remotePath)
 	log.Debugf("* Local: %s\n", localPath)
@@ -183,6 +183,13 @@ func (s *S3Backend) Pull(ctx context.Context, remotePath, localPath string) erro
 			// Calculate local destination
 			relPath := strings.TrimPrefix(objKey, key)
 			destPath := filepath.Join(localPath, relPath)
+
+			// Check if local file exists (unless force)
+			if !opts.Force {
+				if _, err := os.Stat(destPath); err == nil {
+					return fmt.Errorf("'%s' already exists locally; delete it first, or use --force flag", destPath)
+				}
+			}
 
 			if err := s.pullFile(ctx, objKey, destPath); err != nil {
 				return err

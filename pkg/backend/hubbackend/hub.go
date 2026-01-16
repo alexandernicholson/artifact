@@ -78,10 +78,11 @@ func (h *HubBackend) Push(ctx context.Context, localPath, remotePath string, opt
 }
 
 // Pull downloads a file or directory from remote storage via Hub signed URLs.
-func (h *HubBackend) Pull(ctx context.Context, remotePath, localPath string) error {
+func (h *HubBackend) Pull(ctx context.Context, remotePath, localPath string, opts backend.PullOptions) error {
 	log.Debug("HubBackend: Pulling...\n")
 	log.Debugf("* Remote: %s\n", remotePath)
 	log.Debugf("* Local: %s\n", localPath)
+	log.Debugf("* Force: %v\n", opts.Force)
 
 	// Get signed URLs from hub
 	response, err := h.client.GenerateSignedURLs([]string{remotePath}, hub.GenerateSignedURLsRequestPULL)
@@ -93,8 +94,8 @@ func (h *HubBackend) Pull(ctx context.Context, remotePath, localPath string) err
 		return &backend.ErrNotFound{Path: remotePath}
 	}
 
-	// Build artifacts from signed URLs
-	artifacts, err := buildArtifactsForPull(response.Urls, remotePath, localPath)
+	// Build artifacts from signed URLs (checks for existing local files)
+	artifacts, err := buildArtifactsForPull(response.Urls, remotePath, localPath, opts.Force)
 	if err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ func executePush(artifacts []*api.Artifact) (*storage.PushStats, error) {
 	return stats, nil
 }
 
-func buildArtifactsForPull(signedURLs []*api.SignedURL, remotePath, localPath string) ([]*api.Artifact, error) {
+func buildArtifactsForPull(signedURLs []*api.SignedURL, remotePath, localPath string, force bool) ([]*api.Artifact, error) {
 	var artifacts []*api.Artifact
 
 	for _, signedURL := range signedURLs {
@@ -249,6 +250,14 @@ func buildArtifactsForPull(signedURLs []*api.SignedURL, remotePath, localPath st
 		}
 
 		destPath := path.Join(localPath, obj[len(remotePath):])
+
+		// Check if local file exists (unless force)
+		if !force {
+			if _, err := os.Stat(destPath); err == nil {
+				return nil, fmt.Errorf("'%s' already exists locally; delete it first, or use --force flag", destPath)
+			}
+		}
+
 		artifacts = append(artifacts, &api.Artifact{
 			RemotePath: obj,
 			LocalPath:  destPath,

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/semaphoreci/artifact/pkg/backend"
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/storage"
@@ -33,21 +34,13 @@ func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 		return nil, nil, err
 	}
 
-	// Check if destination exists (unless force)
-	if !force {
-		if _, err := os.Stat(paths.Destination); err == nil {
-			log.Errorf("'%s' already exists locally; delete it first, or use --force flag\n", paths.Destination)
-			return nil, nil, err
-		}
-	}
-
 	// Get the configured backend
 	b := getBackend()
 	defer func() { _ = b.Close() }()
 
 	// Pull using the backend
 	ctx := getContext()
-	err = b.Pull(ctx, paths.Source, paths.Destination)
+	err = b.Pull(ctx, paths.Source, paths.Destination, backend.PullOptions{Force: force})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -16,6 +16,11 @@ type PushOptions struct {
 	Force bool // Overwrite existing files
 }
 
+// PullOptions contains options for pull operations.
+type PullOptions struct {
+	Force bool // Overwrite existing local files
+}
+
 // Backend defines the interface for artifact storage operations.
 // Implementations must handle their own authentication and connection management.
 type Backend interface {
@@ -29,7 +34,8 @@ type Backend interface {
 	// remotePath is the source path in storage.
 	// localPath is the destination path on local filesystem.
 	// Returns error if the remote file doesn't exist or operation fails.
-	Pull(ctx context.Context, remotePath, localPath string) error
+	// If a local file exists and Force is false, returns ErrAlreadyExists.
+	Pull(ctx context.Context, remotePath, localPath string, opts PullOptions) error
 
 	// Yank deletes a file or directory from remote storage.
 	// remotePath is the path to delete in storage.
