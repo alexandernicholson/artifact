@@ -18,6 +18,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func init() {
+	backend.RegisterHubBackend(func() (backend.Backend, error) {
+		return New()
+	})
+}
+
 // HubBackend implements the Backend interface using Semaphore Hub.
 type HubBackend struct {
 	client *hub.Client
