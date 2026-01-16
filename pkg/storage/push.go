@@ -137,7 +137,7 @@ func attachURLs(items []*api.Artifact, signedURLs []*api.SignedURL, force bool) 
 }
 
 func doPush(artifacts []*api.Artifact) (*PushStats, error) {
-	client := newHTTPClient()
+	client := NewHTTPClient()
 	stats := &PushStats{}
 
 	for _, artifact := range artifacts {

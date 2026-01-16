@@ -79,7 +79,7 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 }
 
 func doPull(artifacts []*api.Artifact) (*PullStats, error) {
-	client := newHTTPClient()
+	client := NewHTTPClient()
 	stats := &PullStats{}
 
 	for _, artifact := range artifacts {

@@ -23,7 +23,7 @@ func Yank(hubClient *hub.Client, name string) error {
 }
 
 func doYank(URLs []*api.SignedURL) error {
-	client := newHTTPClient()
+	client := NewHTTPClient()
 
 	for _, u := range URLs {
 		// The hub is not returning the method for yank operations, so we fill it here

@@ -10,7 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func newHTTPClient() *retryablehttp.Client {
+// NewHTTPClient creates a new retryable HTTP client for storage operations.
+func NewHTTPClient() *retryablehttp.Client {
 	return &retryablehttp.Client{
 		HTTPClient:   http.DefaultClient,
 		RetryWaitMin: 500 * time.Millisecond,
